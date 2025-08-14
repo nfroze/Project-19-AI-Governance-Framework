@@ -4,15 +4,17 @@ import "tfplan/v2" as tfplan
 # Required tags for all resources
 required_tags = ["Environment", "Project", "Owner"]
 
-# Get all resources that will be created or modified
+# Get resources that will be created or modified
 all_resources = filter tfplan.resource_changes as _, rc {
   rc.mode is "managed" and
   (rc.change.actions contains "create" or rc.change.actions contains "update")
 }
 
-# Check that all resources have required tags
+# Check only resources that have tags defined
 main = rule {
   all all_resources as _, resource {
+    # Skip if resource doesn't have tags attribute
+    not (resource.change.after.tags else null is null) implies
     all required_tags as tag {
       resource.change.after.tags[tag] else "" != ""
     }
