@@ -7,7 +7,7 @@ Built an enterprise policy governance framework that enforces compliance from **
 **Key Achievements:**
 - ✅ Dual-layer governance with Sentinel (pre-deployment) and OPA (runtime)
 - ✅ GitOps workflow with HCP Terraform and GitHub integration
-- ✅ 100% enforcement of tagging and labeling standards
+- ✅ 100% enforcement of tagging and labelling standards
 - ✅ Clear policy violations with business-friendly error messages
 - ✅ Zero manual intervention - fully automated compliance
 
@@ -17,7 +17,7 @@ Built an enterprise policy governance framework that enforces compliance from **
 
 ## 🚀 Project Overview
 
-## 🏗️ Architecture
+## 🗏 Architecture
 
 ```
 GitHub → HCP Terraform → Sentinel Policies → AWS EKS → OPA Gatekeeper → Kubernetes
@@ -59,21 +59,21 @@ project-19-policy-governance/
 
 The project uses GitHub VCS integration for automatic infrastructure deployment triggers.
 
-![VCS Provider](screenshots/vcs-provider.png)
+![VCS Provider](screenshots/1.png)
 *GitHub connected as VCS provider enabling automatic Terraform runs on code push*
 
 ### 2. Policy Set Configuration
 
-Sentinel policies are organized into policy sets and connected to workspaces for enforcement.
+Sentinel policies are organised into policy sets and connected to workspaces for enforcement.
 
-![Policy Sets](screenshots/policy-sets.png)
+![Policy Sets](screenshots/2.png)
 *Sentinel policy set connected to workspace, enforcing governance on every Terraform run*
 
 ### 3. Infrastructure Deployment with Terraform Cloud
 
 The project uses HCP Terraform for secure, automated infrastructure deployment with built-in policy checks.
 
-![Terraform Apply Success](screenshots/terraform-apply.png)
+![Terraform Apply Success](screenshots/3.png)
 *Successfully created 56 resources including VPC, EKS cluster, and node groups*
 
 ### 4. Sentinel Policy Enforcement (Pre-deployment)
@@ -83,17 +83,15 @@ Before infrastructure deployment, Sentinel policies validate:
 - Approved instance types for cost control
 - Overall deployment cost limits
 
-![Sentinel Policies Passing](screenshots/sentinel-policies.png)
+![Sentinel Policies Passing](screenshots/4.png)
 *All three Sentinel policies passing: cost limits, instance types, and required tags*
 
 ### 5. AWS EKS Infrastructure
 
 The deployed infrastructure includes a production-ready EKS cluster with managed node groups.
 
-![EKS Cluster and Nodes](screenshots/aws-eks-nodes.png)
+![EKS Cluster and Nodes](screenshots/5.png)
 *AWS Console showing the EKS cluster with 2 healthy t3.medium nodes in the managed node group*
-
-### 6. OPA Gatekeeper Runtime Enforcement
 
 ### 6. OPA Gatekeeper Runtime Enforcement
 
@@ -101,56 +99,35 @@ The deployed infrastructure includes a production-ready EKS cluster with managed
 
 OPA Gatekeeper blocks deployments that don't meet governance requirements:
 
-![OPA Denial](screenshots/opa-denial.png)
+![OPA Denial](screenshots/6.png)
 *OPA blocking a deployment missing required labels with clear error messaging*
 
 #### Compliant Deployment Success
 
-Properly labeled deployments are allowed through:
+Properly labelled deployments are allowed through:
 
-![OPA Success](screenshots/opa-success.png)
+![OPA Success](screenshots/7.png)
 *Successful deployment of a compliant application*
 
-### 7. Running Workloads
-
-The approved deployment running with all required labels for governance:
-
-![Deployment with Labels](screenshots/deployment-labels.png)
-*Kubernetes deployment showing required labels: app, environment, and version*
-
-### 8. Application Verification
+### 7. Application Verification
 
 The deployed application is accessible and functioning:
 
-![Nginx Running](screenshots/nginx-welcome.png)
+![Nginx Running](screenshots/8.png)
 *Nginx welcome page confirming successful application deployment*
 
-### 9. System Components
+### 8. System Components
 
 All system components including OPA Gatekeeper pods actively enforcing policies:
 
-![All Pods Running](screenshots/all-pods.png)
+![All Pods Running](screenshots/9.png)
 *Gatekeeper and application pods running in the cluster*
 
-### 10. GitOps Workflow
-
-The project uses GitOps with HCP Terraform watching the GitHub repository:
-
-![HCP Terraform Workspace](screenshots/workspace-applied.png)
-*HCP Terraform workspace showing successful apply status*
-
-### 11. Secure State Management
-
-Terraform state is securely stored in HCP Terraform's encrypted backend:
-
-![State Management](screenshots/state-backend.png)
-*Remote state storage in HCP Terraform for team collaboration and security*
-
-### 12. Clean Infrastructure Teardown
+### 9. Clean Infrastructure Teardown
 
 Complete lifecycle management with controlled infrastructure destruction:
 
-![Terraform Destroy](screenshots/terraform-destroy.png)
+![Terraform Destroy](screenshots/10.png)
 *All 56 resources cleanly destroyed, demonstrating full lifecycle management with policies enforced even on destruction*
 
 ## ✨ Key Features Demonstrated
@@ -182,9 +159,7 @@ Complete lifecycle management with controlled infrastructure destruction:
 - **Audit Preparation**: 2 hours vs 2 weeks for compliance reports
 
 ### Risk Mitigation
-
-### Risk Mitigation
-- **Prevents unauthorized GPU provisioning** (£10K+ per month savings)
+- **Prevents unauthorised GPU provisioning** (£10K+ per month savings)
 - **Blocks untagged resources** (avoiding "mystery" cloud costs)
 - **Enforces security labels** (preventing production incidents)
 - **Automated EU AI Act compliance** (avoiding regulatory fines)
@@ -256,7 +231,7 @@ spec:
 - **Audit trail**: Complete policy decision history in HCP Terraform
 - **Lifecycle management**: Full create, update, and destroy governance
 
-## 🎓 Lessons Learned
+## 🎓 Lessons Learnt
 
 1. **Policy as Code is Essential** - Manual governance doesn't scale
 2. **Layer Your Policies** - Different policies for different stages (build vs runtime)
@@ -266,7 +241,7 @@ spec:
 
 ## 🚀 Future Enhancements
 
-- Add cost optimization policies based on actual usage
+- Add cost optimisation policies based on actual usage
 - Implement EU AI Act compliance policies
 - Integrate with SIEM for policy violation alerts
 - Add automated remediation for common violations
@@ -306,4 +281,4 @@ Built with enterprise-grade tools (Sentinel, OPA, HCP Terraform) following Polic
 
 ---
 
-*Platform demonstrates production-ready policy governance with dual-layer enforcement, preventing violations at both infrastructure and runtime levels while maintaining developer velocity.*
+*Platform demonstrates production-ready policy governance with dual-layer enforcement, preventing violations at both infrastructure and runtime levels whilst maintaining developer velocity.*
