@@ -1,0 +1,48 @@
+# AI Resource Governance - Mandatory Tagging Policy
+# Ensures all ML/AI resources are tagged for cost tracking, compliance, and experiment tracking
+# Critical for EU AI Act compliance and ML experiment attribution
+
+import "tfplan/v2" as tfplan
+
+# Required tags for AI/ML resource governance
+required_tags = [
+  "Environment",   # dev/staging/production
+  "Project",       # Project identifier for cost allocation
+  "Owner",         # Team ownership for accountability
+  "ML-Team",       # ML team attribution (nlp/computer-vision/platform)
+  "Model-Type",    # Model category (inference/training/none)
+]
+
+# Resources that could host AI/ML workloads
+# In production, would include: aws_sagemaker_*, aws_batch_*, aws_lambda_*
+ai_capable_resources = [
+  "aws_vpc",
+  "aws_eks_cluster", 
+  "aws_eks_node_group",      # Could host GPU nodes
+  "aws_subnet",
+  "aws_security_group",
+  "aws_kms_key",             # Model encryption
+  "aws_s3_bucket",           # Model storage
+  "aws_ecr_repository",      # Model containers
+]
+
+# Get resources being created or modified
+ml_resources = filter tfplan.resource_changes as _, rc {
+  rc.type in ai_capable_resources and
+  (rc.change.actions contains "create" or 
+   rc.change.actions contains "update")
+}
+
+# Enforce tagging for ML governance and cost tracking
+main = rule {
+  all ml_resources as _, resource {
+    all required_tags as tag {
+      # Special handling for Model-Type (can be "none" for non-ML resources)
+      tag == "Model-Type" or
+      resource.change.after.tags[tag] else "" != ""
+    }
+  }
+}
+
+# Print compliance message
+print("AI Resource Tagging: Enforcing ML governance tags for cost attribution and EU AI Act compliance")

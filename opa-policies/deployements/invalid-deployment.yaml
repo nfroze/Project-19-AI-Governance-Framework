@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: untracked-model
+  namespace: default
+  labels:
+    app: experimental-model  # Missing 'model-version' and 'ml-team'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: experimental-model
+  template:
+    metadata:
+      labels:
+        app: experimental-model
+        # VIOLATION: Missing required ML governance labels:
+        # - model-version (for rollback capability)
+        # - ml-team (for cost attribution)
+        # No model-registry-url annotation (blocks production deployment)
+    spec:
+      containers:
+      - name: untracked-model
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "4Gi"  # High memory without team attribution
+            cpu: "4"       # High CPU without cost tracking
+            # This deployment would consume resources without:
+            # - Team attribution for chargeback
+            # - Model versioning for rollback
+            # - Registry tracking for reproducibility
+        env:
+        - name: DANGER
+          value: "Untracked ML model could cost £1000s in compute"

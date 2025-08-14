@@ -1,0 +1,84 @@
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: mlmodelregistry
+  annotations:
+    description: "Enforce model registry usage for production ML deployments"
+    policy-version: "1.0.0"
+    mlops-standard: "required"
+spec:
+  crd:
+    spec:
+      names:
+        kind: MLModelRegistry
+        listKind: MLModelRegistryList
+        plural: mlmodelregistries
+        singular: mlmodelregistry
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            registries:
+              description: "Allowed model registries"
+              type: array
+              items:
+                type: string
+              default: ["mlflow", "kubeflow", "sagemaker"]
+            environments:
+              description: "Environments requiring registry"
+              type: array
+              items:
+                type: string
+              default: ["production", "staging"]
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package mlmodelregistry
+        
+        # Check if this is an ML workload
+        is_ml_workload {
+          input.review.object.metadata.labels["model-version"]
+        }
+        
+        # Check if environment requires registry
+        requires_registry {
+          input.parameters.environments[_] = input.review.object.metadata.labels.environment
+        }
+        
+        # Validate registry URL format
+        has_valid_registry {
+          input.review.object.metadata.annotations["model-registry-url"]
+          contains(input.review.object.metadata.annotations["model-registry-url"], "://")
+        }
+        
+        violation[{"msg": msg}] {
+          is_ml_workload
+          requires_registry
+          not has_valid_registry
+          
+          msg := sprintf(`
+⚠️ ML MODEL REGISTRY VIOLATION - Production Deployment Blocked
+
+Deployment: %v
+Environment: %v
+Model Version: %v
+
+COMPLIANCE FAILURE: Production ML models must be deployed from a model registry.
+
+This policy enforces:
+- Model reproducibility and versioning
+- Experiment tracking and lineage
+- EU AI Act Article 12 (Record-keeping)
+- Prevention of untested models in production
+
+Required annotation: model-registry-url
+Example: mlflow://models/sentiment-analyzer/v2.1.0
+
+Estimated risk without registry:
+- £5,000+ debugging untracked model issues
+- 3-day recovery time for model rollback
+- Non-compliance with AI governance standards`, 
+            [input.review.object.metadata.name,
+             input.review.object.metadata.labels.environment,
+             input.review.object.metadata.labels["model-version"]])
+        }

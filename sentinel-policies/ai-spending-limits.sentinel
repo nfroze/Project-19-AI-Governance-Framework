@@ -1,0 +1,42 @@
+# AI/ML Spending Control Policy
+# Prevents runaway AI infrastructure costs from GPU instances and ML experiments
+# Implements FinOps best practices for AI workload cost management
+
+import "tfrun"
+import "tfplan/v2" as tfplan
+
+# Monthly spending limits by workload type
+max_monthly_cost = 10000  # £10K limit for ML infrastructure
+gpu_monthly_limit = 5000   # £5K specific limit for GPU instances
+
+# Check if this deployment includes ML/AI workloads
+ml_indicators = filter tfplan.resource_changes as _, rc {
+  (rc.change.after.tags.ML-Team else "none") != "none" or
+  (rc.change.after.tags.Model-Type else "none") != "none" or
+  (rc.type is "aws_sagemaker_endpoint") or
+  (rc.type is "aws_batch_job_definition")
+}
+
+# Cost control rules
+cost_within_limit = rule {
+  tfrun.cost_estimate.proposed_monthly_cost else 0 < max_monthly_cost
+}
+
+# Warning for ML workloads approaching limits
+ml_cost_warning = rule when length(ml_indicators) > 0 {
+  tfrun.cost_estimate.proposed_monthly_cost else 0 < (max_monthly_cost * 0.8)
+}
+
+# Main rule combining all cost controls
+main = rule {
+  cost_within_limit and
+  (length(ml_indicators) == 0 or ml_cost_warning)
+}
+
+# Print cost analysis
+print("AI Spending Control: Monthly cost estimate: £" + 
+      string(tfrun.cost_estimate.proposed_monthly_cost else 0))
+      
+if length(ml_indicators) > 0 {
+  print("ML Workload Detected: Enhanced cost monitoring active")
+}

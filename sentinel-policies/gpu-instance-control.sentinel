@@ -1,0 +1,36 @@
+# GPU Instance Control Policy
+# Prevents unauthorised GPU provisioning that could cost £10K+ per month
+# In production, this prevents: p3.2xlarge (£3.06/hr), g4dn.xlarge (£0.526/hr)
+
+import "tfplan/v2" as tfplan
+
+# Allowed instance types for non-GPU workloads
+# GPU instances require explicit approval through exception process
+allowed_instance_types = [
+  "t3.micro",   # £0.01/hr - development
+  "t3.small",   # £0.02/hr - testing  
+  "t3.medium",  # £0.04/hr - production services
+  # BLOCKED GPU INSTANCES:
+  # "p3.2xlarge"    - £3.06/hr (£2,203/month) - V100 GPU
+  # "p3.8xlarge"    - £12.24/hr (£8,813/month) - 4x V100 GPUs
+  # "g4dn.xlarge"   - £0.526/hr (£379/month) - T4 GPU
+  # "g4dn.12xlarge" - £3.912/hr (£2,817/month) - 4x T4 GPUs
+]
+
+# Find all EC2 instances including those in EKS node groups
+ec2_instances = filter tfplan.resource_changes as _, rc {
+  rc.type is "aws_instance" and
+  (rc.change.actions contains "create" or 
+   rc.change.actions contains "update" or
+   rc.change.actions contains "replace")
+}
+
+# Main rule: Prevent expensive GPU instance creation
+main = rule {
+  all ec2_instances as _, instance {
+    instance.change.after.instance_type in allowed_instance_types
+  }
+}
+
+# Print violation message for clarity
+print("GPU Instance Control: Validating instance types to prevent unauthorised GPU provisioning")

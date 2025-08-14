@@ -1,0 +1,29 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: MLModelRegistry
+metadata:
+  name: production-model-registry
+  annotations:
+    description: "Require model registry for production ML deployments"
+    risk-level: "high"
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+    - apiGroups: ["apps"]
+      kinds: ["Deployment", "StatefulSet"]
+    namespaces: ["ml-production", "default"]
+    # Only apply to ML workloads
+    labelSelector:
+      matchExpressions:
+      - key: model-version
+        operator: Exists
+  parameters:
+    registries: 
+      - "mlflow"
+      - "kubeflow"
+      - "sagemaker"
+      - "azureml"
+    environments:
+      - "production"
+      - "staging"
+    message: "Production ML models must be deployed from approved registries"

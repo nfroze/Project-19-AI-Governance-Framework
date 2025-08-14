@@ -1,0 +1,60 @@
+# ML Model Deployment Governance
+# Enforces best practices for model deployment and experiment tracking
+# Ensures compliance with MLOps standards and EU AI Act requirements
+
+import "tfplan/v2" as tfplan
+
+# Check for ML model deployments
+ml_deployments = filter tfplan.resource_changes as _, rc {
+  rc.change.after.tags.Model-Type else "none" != "none" and
+  rc.change.after.tags.Model-Type != "inference-only" and
+  rc.change.actions contains "create"
+}
+
+# Require experiment tracking for all ML workloads
+experiment_tracking = rule {
+  all ml_deployments as _, deployment {
+    deployment.change.after.tags.Experiment-ID else "" != "" or
+    deployment.change.after.tags.MLflow-Run-ID else "" != "" or
+    deployment.change.after.tags.Model-Type == "none"
+  }
+}
+
+# Require model version for production deployments
+model_versioning = rule {
+  all ml_deployments as _, deployment {
+    deployment.change.after.tags.Environment != "production" or
+    deployment.change.after.tags.Model-Version else "" != ""
+  }
+}
+
+# High-risk AI systems (EU AI Act) require additional governance
+high_risk_ai_check = rule {
+  all ml_deployments as _, deployment {
+    deployment.change.after.tags.AI-Risk-Level else "minimal" != "high" or
+    (deployment.change.after.tags.Risk-Assessment else "" != "" and
+     deployment.change.after.tags.Compliance-Review else "" != "")
+  }
+}
+
+# Main rule combining all model governance
+main = rule {
+  experiment_tracking and 
+  model_versioning and 
+  high_risk_ai_check
+}
+
+# Provide helpful feedback
+print("Model Deployment Governance: Validating ML deployment compliance")
+
+if not experiment_tracking {
+  print("WARNING: ML models must have Experiment-ID or MLflow-Run-ID for tracking")
+}
+
+if not model_versioning {
+  print("ERROR: Production models must include Model-Version tag")
+}
+
+if not high_risk_ai_check {
+  print("COMPLIANCE: High-risk AI systems require Risk-Assessment and Compliance-Review")
+}

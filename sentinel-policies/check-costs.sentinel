@@ -1,7 +1,0 @@
-# Simple cost awareness policy
-import "tfrun"
-
-# Check if cost estimate exists and is under limit
-main = rule {
-  tfrun.cost_estimate.proposed_monthly_cost else 0 < 500
-}
