@@ -1,4 +1,4 @@
-# 🛡️ Project 19: Policy as Code - Enterprise AI Governance Framework
+# ⚖️ Project 19: Policy as Code
 
 ## 🎯 TLDR
 
