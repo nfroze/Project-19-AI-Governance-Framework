@@ -3,10 +3,10 @@
 
 terraform {
   cloud {
-    organization = "your-org-name"  # Replace with your TF Cloud org
+    organization = "nfroze"
     
     workspaces {
-      name = "ai-governance-demo"
+      name = "nfroze"
     }
   }
   
