@@ -35,6 +35,3 @@ terraform.rc
 # OPA
 bundle.tar.gz
 .opa/
-
-# Screenshots (optional - remove if you want to commit them)
-# screenshots/*.png
