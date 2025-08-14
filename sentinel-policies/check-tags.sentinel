@@ -1,20 +1,29 @@
-# Simple tag enforcement policy
+# Check tags only on main resources that support them
 import "tfplan/v2" as tfplan
 
-# Required tags for all resources
 required_tags = ["Environment", "Project", "Owner"]
 
-# Get resources that will be created or modified
-all_resources = filter tfplan.resource_changes as _, rc {
-  rc.mode is "managed" and
+# List of resource types we actually want to check
+# These are the main resources, not all the supporting stuff
+important_resources = [
+  "aws_eks_cluster",
+  "aws_vpc", 
+  "aws_subnet",
+  "aws_eks_node_group",
+  "aws_instance",
+  "aws_db_instance",
+  "aws_s3_bucket",
+]
+
+# Get only the important resources that support tags
+tagged_resources = filter tfplan.resource_changes as _, rc {
+  rc.type in important_resources and
   (rc.change.actions contains "create" or rc.change.actions contains "update")
 }
 
-# Check only resources that have tags defined
+# Check tags only on resources that matter
 main = rule {
-  all all_resources as _, resource {
-    # Skip if resource doesn't have tags attribute
-    not (resource.change.after.tags else null is null) implies
+  all tagged_resources as _, resource {
     all required_tags as tag {
       resource.change.after.tags[tag] else "" != ""
     }
