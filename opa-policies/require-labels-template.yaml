@@ -23,7 +23,7 @@ spec:
         violation[{"msg": msg}] {
           required := input.parameters.labels
           provided := input.review.object.metadata.labels
-          missing := required[_]
-          not provided[missing]
-          msg := sprintf("Missing required label: %v", [missing])
+          missing := [label | required[_] = label; not provided[label]]
+          count(missing) > 0
+          msg := sprintf("\n❌ DEPLOYMENT BLOCKED - Governance Policy Violation\n   Deployment: '%v'\n   Missing Labels: %v\n   Required Labels: %v\n   Reason: All deployments must have proper labels for cost tracking and ownership", [input.review.object.metadata.name, missing, required])
         }
