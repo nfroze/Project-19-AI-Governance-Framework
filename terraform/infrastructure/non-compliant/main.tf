@@ -6,7 +6,7 @@ terraform {
     organization = "nfroze"
     
     workspaces {
-      name = "nfroze"
+      name = "Project-19-AI-Policy-as-Code"
     }
   }
   
