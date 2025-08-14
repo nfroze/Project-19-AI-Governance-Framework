@@ -1,0 +1,15 @@
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: K8sRequiredLabels
+metadata:
+  name: must-have-environment-and-app
+spec:
+  match:
+    kinds:
+    - apiGroups: ["apps"]
+      kinds: ["Deployment"]
+    namespaces: ["default"]
+  parameters:
+    labels: 
+      - "app"
+      - "environment"
+      - "version"
