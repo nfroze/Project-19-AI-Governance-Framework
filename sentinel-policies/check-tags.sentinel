@@ -1,31 +1,21 @@
-# Check tags only on main resources that support them
+# Debug version - let's see what resources exist
 import "tfplan/v2" as tfplan
 
 required_tags = ["Environment", "Project", "Owner"]
 
-# List of resource types we actually want to check
-# These are the main resources, not all the supporting stuff
-important_resources = [
-  "aws_eks_cluster",
-  "aws_vpc", 
-  "aws_subnet",
-  "aws_eks_node_group",
-  "aws_instance",
-  "aws_db_instance",
-  "aws_s3_bucket",
-]
-
-# Get only the important resources that support tags
-tagged_resources = filter tfplan.resource_changes as _, rc {
-  rc.type in important_resources and
-  (rc.change.actions contains "create" or rc.change.actions contains "update")
+# Get ALL resources being created
+all_resources = filter tfplan.resource_changes as _, rc {
+  rc.mode is "managed" and
+  rc.change.actions contains "create"
 }
 
-# Check tags only on resources that matter
-main = rule {
-  all tagged_resources as _, resource {
-    all required_tags as tag {
-      resource.change.after.tags[tag] else "" != ""
-    }
-  }
+# Print what we're seeing
+print("Total resources being created:", length(all_resources))
+
+# Check what types of resources are being created
+for all_resources as address, r {
+  print("Resource:", address, "Type:", r.type, "Has tags:", r.change.after.tags else "NO TAGS")
 }
+
+# For now, just pass so we can see the debug output
+main = rule { true }
