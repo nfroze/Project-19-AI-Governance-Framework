@@ -1,0 +1,137 @@
+# Data Classification Policy for AI Workloads
+# Enforces data handling requirements for ML training and inference
+# Ensures GDPR compliance and proper data governance
+
+import "tfplan/v2" as tfplan
+import "strings"
+
+# Parameters
+param required_tags default ["data-classification", "data-owner", "retention-policy"]
+param valid_classifications default ["public", "internal", "confidential", "restricted"]
+param pii_environments default ["production", "staging"]
+
+# Check all ML resources have proper data classification
+data_classification_check = rule {
+  all tfplan.resource_changes as _, rc {
+    # Check resources that handle data
+    rc.type not in [
+      "aws_sagemaker_endpoint",
+      "aws_sagemaker_training_job",
+      "aws_sagemaker_processing_job",
+      "aws_s3_bucket",
+      "aws_glue_catalog_database",
+      "azurerm_machine_learning_workspace",
+      "azurerm_storage_account",
+      "google_vertex_ai_dataset",
+      "google_bigquery_dataset"
+    ] or
+    check_data_tags(rc)
+  }
+}
+
+# Verify required tags exist and are valid
+check_data_tags = func(rc) {
+  tags = rc.change.after.tags else {}
+  
+  # Check all required tags are present
+  all required_tags as tag {
+    tags contains tag
+  } and
+  
+  # Validate classification value
+  tags["data-classification"] in valid_classifications and
+  
+  # Additional checks for sensitive data
+  validate_sensitive_data_handling(rc, tags["data-classification"])
+}
+
+# Enhanced requirements for sensitive data
+validate_sensitive_data_handling = func(rc, classification) {
+  # Public data has minimal requirements
+  if classification == "public" {
+    return true
+  }
+  
+  # Restricted/Confidential data needs additional protection
+  if classification in ["restricted", "confidential"] {
+    return check_encryption(rc) and check_access_controls(rc)
+  }
+  
+  # Internal data needs basic protection
+  return check_basic_protection(rc)
+}
+
+# Verify encryption for sensitive data
+check_encryption = func(rc) {
+  # S3 buckets must have encryption
+  if rc.type == "aws_s3_bucket" {
+    encryption = rc.change.after.server_side_encryption_configuration else []
+    return length(encryption) > 0
+  }
+  
+  # SageMaker endpoints must use KMS
+  if rc.type == "aws_sagemaker_endpoint" {
+    kms_key = rc.change.after.kms_key_id else ""
+    return kms_key != ""
+  }
+  
+  # Azure storage must have encryption
+  if rc.type == "azurerm_storage_account" {
+    encryption = rc.change.after.encryption else {}
+    return encryption.enabled else false
+  }
+  
+  return true
+}
+
+# Verify access controls
+check_access_controls = func(rc) {
+  # Check for VPC/network isolation
+  if rc.type contains "sagemaker" {
+    vpc_config = rc.change.after.vpc_config else []
+    return length(vpc_config) > 0
+  }
+  
+  # Check for private endpoints
+  if rc.type contains "azurerm" {
+    network_rules = rc.change.after.network_rules else []
+    return length(network_rules) > 0
+  }
+  
+  return true
+}
+
+# Basic protection for internal data
+check_basic_protection = func(rc) {
+  tags = rc.change.after.tags else {}
+  
+  # Must have data owner
+  return tags["data-owner"] != "" and tags["retention-policy"] != ""
+}
+
+# Check for PII in production
+pii_compliance_check = rule {
+  all tfplan.resource_changes as _, rc {
+    environment = rc.change.after.tags.environment else "development"
+    classification = rc.change.after.tags["data-classification"] else "public"
+    
+    # If handling PII in production/staging
+    (environment not in pii_environments or 
+     classification not in ["restricted", "confidential"]) or
+    
+    # Must have GDPR compliance tags
+    (rc.change.after.tags["gdpr-compliant"] == "true" and
+     rc.change.after.tags["data-retention-days"] != "" and
+     rc.change.after.tags["purpose-of-processing"] != "")
+  }
+}
+
+# Main rule combining all checks
+main = rule {
+  data_classification_check and pii_compliance_check
+} else {
+  "Data classification tags are required for all ML resources. " +
+  "Valid classifications: public, internal, confidential, restricted. " +
+  "Sensitive data requires encryption and access controls. " +
+  "PII processing requires GDPR compliance tags."
+}

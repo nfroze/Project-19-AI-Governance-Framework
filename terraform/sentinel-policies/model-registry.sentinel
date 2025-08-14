@@ -1,0 +1,94 @@
+# Model Registry Enforcement Policy
+# Ensures all ML model deployments use approved model registries
+# Prevents deployment of untracked/unapproved models to production
+
+import "tfplan/v2" as tfplan
+import "strings"
+
+# Parameters from sentinel.hcl
+param allowed_registries default [
+  "mlflow.company.internal",
+  "sagemaker.amazonaws.com/model-registry"
+]
+param environments_requiring_registry default ["production", "staging"]
+
+# Main rule - all ML resources must use approved registries
+model_registry_required = rule {
+  all tfplan.resource_changes as _, rc {
+    # Check SageMaker endpoints
+    rc.type not in ["aws_sagemaker_endpoint", "aws_sagemaker_model", "aws_sagemaker_endpoint_configuration"] or
+    check_sagemaker_model_registry(rc)
+  } and
+  all tfplan.resource_changes as _, rc {
+    # Check Azure ML deployments
+    rc.type not in ["azurerm_machine_learning_inference_cluster", "azurerm_machine_learning_compute_instance"] or
+    check_azure_ml_registry(rc)
+  } and
+  all tfplan.resource_changes as _, rc {
+    # Check Vertex AI deployments
+    rc.type not in ["google_vertex_ai_endpoint", "google_ml_engine_model"] or
+    check_vertex_ai_registry(rc)
+  }
+}
+
+# Check SageMaker uses model registry
+check_sagemaker_model_registry = func(rc) {
+  environment = rc.change.after.tags.environment else "development"
+  
+  # Only enforce for specified environments
+  if environment not in environments_requiring_registry {
+    return true
+  }
+  
+  # Check if model URI points to approved registry
+  model_data_url = rc.change.after.primary_container[0].model_data_url else ""
+  
+  # Verify model comes from approved source
+  any allowed_registries as registry {
+    strings.has_prefix(model_data_url, "s3://") and
+    strings.contains(model_data_url, "model-registry") or
+    strings.contains(model_data_url, registry)
+  }
+}
+
+# Check Azure ML uses model registry
+check_azure_ml_registry = func(rc) {
+  environment = rc.change.after.tags.environment else "development"
+  
+  if environment not in environments_requiring_registry {
+    return true
+  }
+  
+  # Check for model registry reference
+  model_id = rc.change.after.model_id else ""
+  
+  any allowed_registries as registry {
+    strings.contains(model_id, "azureml://") and
+    strings.contains(model_id, "/models/")
+  }
+}
+
+# Check Vertex AI uses model registry
+check_vertex_ai_registry = func(rc) {
+  environment = rc.change.after.labels.environment else "development"
+  
+  if environment not in environments_requiring_registry {
+    return true
+  }
+  
+  # Check for model registry reference
+  model_name = rc.change.after.model_name else ""
+  
+  any allowed_registries as registry {
+    strings.contains(model_name, "projects/") and
+    strings.contains(model_name, "/models/")
+  }
+}
+
+# Main rule with custom error message
+main = rule {
+  model_registry_required
+} else {
+  "AI model deployments must use an approved model registry (MLflow, SageMaker Model Registry, or Azure ML Registry). " +
+  "Direct deployment from S3 buckets or container images is not allowed in production/staging environments."
+}
