@@ -45,15 +45,13 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  # Simple managed node group
   eks_managed_node_groups = {
     main = {
       desired_size = 2
       min_size     = 1
       max_size     = 3
-
-      instance_types = ["t3.medium"]  # Will be checked by Sentinel
-
+      instance_types = ["t3.medium"]
+      
       tags = {
         Environment = "demo"
         Project     = "policy-governance"
@@ -66,5 +64,6 @@ module "eks" {
   tags = {
     Environment = "demo"
     Project     = "policy-governance"
+    Owner       = "devops-team"  # ADD THIS LINE
   }
 }
