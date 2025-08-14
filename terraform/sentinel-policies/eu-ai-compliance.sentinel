@@ -5,24 +5,10 @@
 import "tfplan/v2" as tfplan
 import "strings"
 
-# Parameters - High-risk AI categories per EU AI Act
-param high_risk_systems default [
-  "biometric-identification",
-  "critical-infrastructure",
-  "education-scoring",
-  "employment-screening", 
-  "credit-scoring",
-  "law-enforcement",
-  "migration-control"
-]
+# Parameters with defaults - High-risk AI categories per EU AI Act
+param high_risk_systems default ["biometric-identification", "critical-infrastructure", "education-scoring", "employment-screening", "credit-scoring", "law-enforcement", "migration-control"]
 
-param required_documentation default [
-  "risk-assessment",
-  "human-oversight-plan",
-  "accuracy-metrics",
-  "bias-testing",
-  "transparency-notice"
-]
+param required_documentation default ["risk-assessment", "human-oversight-plan", "accuracy-metrics", "bias-testing", "transparency-notice"]
 
 # Check if resource is deploying a high-risk AI system
 is_high_risk_ai = func(rc) {
@@ -44,7 +30,7 @@ check_ai_documentation = func(rc) {
   tags = rc.change.after.tags else {}
   
   # All required documents must be referenced
-  all required_documentation as doc {
+  return all required_documentation as doc {
     doc_tag = "eu-ai-act-" + doc
     tags contains doc_tag and tags[doc_tag] != ""
   }
@@ -85,14 +71,7 @@ check_bias_testing = func(rc) {
 eu_ai_act_compliance = rule {
   all tfplan.resource_changes as _, rc {
     # Only check ML/AI resources
-    rc.type not in [
-      "aws_sagemaker_endpoint",
-      "aws_sagemaker_model",
-      "azurerm_machine_learning_inference_cluster",
-      "google_vertex_ai_endpoint",
-      "aws_lambda_function",
-      "azurerm_container_instance"
-    ] or
+    rc.type not in ["aws_sagemaker_endpoint", "aws_sagemaker_model", "azurerm_machine_learning_inference_cluster", "google_vertex_ai_endpoint", "aws_lambda_function", "azurerm_container_instance"] or
     
     # If not high-risk, no special requirements
     not is_high_risk_ai(rc) or
@@ -135,11 +114,5 @@ conformity_assessment = rule {
 main = rule {
   eu_ai_act_compliance and prohibited_ai_check and conformity_assessment
 } else {
-  "EU AI Act Compliance Failed: High-risk AI systems require: " +
-  "1) Complete risk assessment and documentation " +
-  "2) Human oversight mechanism " +
-  "3) Transparency and explainability features " +
-  "4) Bias testing and fairness metrics " +
-  "5) Conformity assessment for CE marking. " +
-  "Prohibited: social scoring, subliminal manipulation, exploitative systems."
+  "EU AI Act Compliance Failed: High-risk AI systems require: 1) Complete risk assessment and documentation 2) Human oversight mechanism 3) Transparency and explainability features 4) Bias testing and fairness metrics 5) Conformity assessment for CE marking. Prohibited: social scoring, subliminal manipulation, exploitative systems."
 }

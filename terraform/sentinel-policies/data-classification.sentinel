@@ -5,7 +5,7 @@
 import "tfplan/v2" as tfplan
 import "strings"
 
-# Parameters
+# Parameters with defaults
 param required_tags default ["data-classification", "data-owner", "retention-policy"]
 param valid_classifications default ["public", "internal", "confidential", "restricted"]
 param pii_environments default ["production", "staging"]
@@ -14,17 +14,7 @@ param pii_environments default ["production", "staging"]
 data_classification_check = rule {
   all tfplan.resource_changes as _, rc {
     # Check resources that handle data
-    rc.type not in [
-      "aws_sagemaker_endpoint",
-      "aws_sagemaker_training_job",
-      "aws_sagemaker_processing_job",
-      "aws_s3_bucket",
-      "aws_glue_catalog_database",
-      "azurerm_machine_learning_workspace",
-      "azurerm_storage_account",
-      "google_vertex_ai_dataset",
-      "google_bigquery_dataset"
-    ] or
+    rc.type not in ["aws_sagemaker_endpoint", "aws_sagemaker_training_job", "aws_sagemaker_processing_job", "aws_s3_bucket", "aws_glue_catalog_database", "azurerm_machine_learning_workspace", "azurerm_storage_account", "google_vertex_ai_dataset", "google_bigquery_dataset"] or
     check_data_tags(rc)
   }
 }
@@ -34,14 +24,10 @@ check_data_tags = func(rc) {
   tags = rc.change.after.tags else {}
   
   # Check all required tags are present
-  all required_tags as tag {
+  return all required_tags as tag {
     tags contains tag
   } and
-  
-  # Validate classification value
   tags["data-classification"] in valid_classifications and
-  
-  # Additional checks for sensitive data
   validate_sensitive_data_handling(rc, tags["data-classification"])
 }
 
@@ -116,7 +102,7 @@ pii_compliance_check = rule {
     classification = rc.change.after.tags["data-classification"] else "public"
     
     # If handling PII in production/staging
-    (environment not in pii_environments or 
+    (environment not in pii_environments or
      classification not in ["restricted", "confidential"]) or
     
     # Must have GDPR compliance tags
@@ -130,8 +116,5 @@ pii_compliance_check = rule {
 main = rule {
   data_classification_check and pii_compliance_check
 } else {
-  "Data classification tags are required for all ML resources. " +
-  "Valid classifications: public, internal, confidential, restricted. " +
-  "Sensitive data requires encryption and access controls. " +
-  "PII processing requires GDPR compliance tags."
+  "Data classification tags are required for all ML resources. Valid classifications: public, internal, confidential, restricted. Sensitive data requires encryption and access controls. PII processing requires GDPR compliance tags."
 }

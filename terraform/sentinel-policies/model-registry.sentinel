@@ -5,11 +5,8 @@
 import "tfplan/v2" as tfplan
 import "strings"
 
-# Parameters from sentinel.hcl
-param allowed_registries default [
-  "mlflow.company.internal",
-  "sagemaker.amazonaws.com/model-registry"
-]
+# Parameters with defaults (no params from sentinel.hcl in VCS)
+param allowed_registries default ["mlflow.company.internal", "sagemaker.amazonaws.com/model-registry", "azureml.azure.com/models"]
 param environments_requiring_registry default ["production", "staging"]
 
 # Main rule - all ML resources must use approved registries
@@ -44,7 +41,7 @@ check_sagemaker_model_registry = func(rc) {
   model_data_url = rc.change.after.primary_container[0].model_data_url else ""
   
   # Verify model comes from approved source
-  any allowed_registries as registry {
+  return any allowed_registries as registry {
     strings.has_prefix(model_data_url, "s3://") and
     strings.contains(model_data_url, "model-registry") or
     strings.contains(model_data_url, registry)
@@ -62,7 +59,7 @@ check_azure_ml_registry = func(rc) {
   # Check for model registry reference
   model_id = rc.change.after.model_id else ""
   
-  any allowed_registries as registry {
+  return any allowed_registries as registry {
     strings.contains(model_id, "azureml://") and
     strings.contains(model_id, "/models/")
   }
@@ -79,7 +76,7 @@ check_vertex_ai_registry = func(rc) {
   # Check for model registry reference
   model_name = rc.change.after.model_name else ""
   
-  any allowed_registries as registry {
+  return any allowed_registries as registry {
     strings.contains(model_name, "projects/") and
     strings.contains(model_name, "/models/")
   }
@@ -89,6 +86,5 @@ check_vertex_ai_registry = func(rc) {
 main = rule {
   model_registry_required
 } else {
-  "AI model deployments must use an approved model registry (MLflow, SageMaker Model Registry, or Azure ML Registry). " +
-  "Direct deployment from S3 buckets or container images is not allowed in production/staging environments."
+  "AI model deployments must use an approved model registry (MLflow, SageMaker Model Registry, or Azure ML Registry). Direct deployment from S3 buckets or container images is not allowed in production/staging environments."
 }

@@ -1,5 +1,3 @@
-# Sentinel Configuration - AI Governance Framework
-
 policy "model-registry-required" {
   source            = "./model-registry.sentinel"
   enforcement_level = "hard-mandatory"

@@ -5,7 +5,7 @@
 import "tfplan/v2" as tfplan
 import "strings"
 
-# Parameters
+# Parameters with defaults
 param require_encryption default true
 param require_private_endpoints default true
 param require_vpc_isolation default true
@@ -98,9 +98,9 @@ imdsv2_check = rule when require_imdsv2 {
 check_imdsv2 = func(rc) {
   metadata_options = rc.change.after.metadata_options else []
   
-  length(metadata_options) > 0 and
-  metadata_options[0].http_tokens == "required" and
-  metadata_options[0].http_endpoint == "enabled"
+  return length(metadata_options) > 0 and
+         metadata_options[0].http_tokens == "required" and
+         metadata_options[0].http_endpoint == "enabled"
 }
 
 # GPU instance security checks
@@ -126,25 +126,21 @@ check_gpu_security = func(rc) {
   tags = rc.change.after.tags else {}
   
   # Must have GPU monitoring enabled
-  tags["gpu-monitoring"] == "enabled" and
-  
-  # Must use approved AMI
-  check_approved_ami(rc) and
-  
-  # Must have security group restrictions
-  check_security_groups(rc)
+  return tags["gpu-monitoring"] == "enabled" and
+         check_approved_ami(rc) and
+         check_security_groups(rc)
 }
 
 # Validate AMI is approved for ML workloads
 check_approved_ami = func(rc) {
   ami = rc.change.after.ami else ""
   
-  any allowed_amis as allowed {
+  return any allowed_amis as allowed {
     if strings.has_suffix(allowed, "*") {
       prefix = strings.trim_suffix(allowed, "*")
-      return strings.has_prefix(ami, prefix)
+      strings.has_prefix(ami, prefix)
     } else {
-      return ami == allowed
+      ami == allowed
     }
   }
 }
@@ -176,22 +172,16 @@ check_iam_role = func(rc) {
   }
   
   # Must have a role assigned
-  role_arn != "" and
-  
-  # Role must follow naming convention
-  (strings.contains(role_arn, "SageMaker") or
-   strings.contains(role_arn, "MLOps") or
-   strings.contains(role_arn, "DataScience"))
+  return role_arn != "" and
+         (strings.contains(role_arn, "SageMaker") or
+          strings.contains(role_arn, "MLOps") or
+          strings.contains(role_arn, "DataScience"))
 }
 
 # Logging and monitoring requirements
 logging_check = rule {
   all tfplan.resource_changes as _, rc {
-    rc.type not in [
-      "aws_sagemaker_endpoint",
-      "aws_sagemaker_model",
-      "aws_instance"
-    ] or
+    rc.type not in ["aws_sagemaker_endpoint", "aws_sagemaker_model", "aws_instance"] or
     check_logging_enabled(rc)
   }
 }
@@ -201,8 +191,8 @@ check_logging_enabled = func(rc) {
   tags = rc.change.after.tags else {}
   
   # Must have logging enabled
-  tags["cloudwatch-logs"] == "enabled" or
-  tags["logging-enabled"] == "true"
+  return tags["cloudwatch-logs"] == "enabled" or
+         tags["logging-enabled"] == "true"
 }
 
 # Main security baseline rule
@@ -214,11 +204,5 @@ main = rule {
   iam_check and
   logging_check
 } else {
-  "Security baseline violation: " +
-  "1) All storage must be encrypted (S3, EBS, SageMaker) " +
-  "2) AI models must use VPC isolation " +
-  "3) EC2 instances must use IMDSv2 " +
-  "4) GPU instances need approved AMIs and monitoring " +
-  "5) Proper IAM roles required " +
-  "6) CloudWatch logging must be enabled"
+  "Security baseline violation: 1) All storage must be encrypted (S3, EBS, SageMaker) 2) AI models must use VPC isolation 3) EC2 instances must use IMDSv2 4) GPU instances need approved AMIs and monitoring 5) Proper IAM roles required 6) CloudWatch logging must be enabled"
 }
