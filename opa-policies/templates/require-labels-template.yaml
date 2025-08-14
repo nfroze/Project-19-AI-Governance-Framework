@@ -2,24 +2,16 @@ apiVersion: templates.gatekeeper.sh/v1beta1
 kind: ConstraintTemplate
 metadata:
   name: k8srequiredlabels
-  annotations:
-    description: "Enforce ML model governance through mandatory labelling"
-    policy-version: "1.0.0"
-    eu-ai-act: "compliant"
 spec:
   crd:
     spec:
       names:
         kind: K8sRequiredLabels
-        listKind: K8sRequiredLabelsList
-        plural: k8srequiredlabels
-        singular: k8srequiredlabels
       validation:
         openAPIV3Schema:
           type: object
           properties:
             labels:
-              description: "List of required labels for ML model tracking"
               type: array
               items:
                 type: string
@@ -34,29 +26,5 @@ spec:
           missing := [label | required[_] = label; not provided[label]]
           count(missing) > 0
           
-          # Construct detailed error message for ML governance
-          msg := sprintf(`
-❌ ML MODEL DEPLOYMENT BLOCKED - AI Governance Violation
-
-Deployment Name: %v
-Namespace: %v
-Missing Labels: %v
-Required Labels: %v
-
-REASON: All ML model deployments must include proper labels for:
-- Cost tracking and attribution (ml-team)
-- Model versioning and rollback (model-version)
-- Experiment tracking and MLOps (app/model-name)
-- EU AI Act compliance auditing
-
-This policy prevents:
-- Untracked model deployments costing £1000s in GPU time
-- Ungoverned AI experiments without attribution
-- Compliance violations for model auditing
-
-To fix: Add the missing labels to your deployment manifest`, 
-            [input.review.object.metadata.name,
-             input.review.object.metadata.namespace,
-             missing, 
-             required])
+          msg := sprintf("❌ ML MODEL DEPLOYMENT BLOCKED - AI Governance Violation\nDeployment: %v\nMissing Labels: %v\nRequired Labels: %v\nREASON: All ML model deployments must include proper labels for cost tracking, model versioning, and EU AI Act compliance", [input.review.object.metadata.name, missing, required])
         }
